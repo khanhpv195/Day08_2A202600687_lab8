@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RAG Chat</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f4;
+        --panel: #ffffff;
+        --ink: #202124;
+        --muted: #667085;
+        --line: #d9ded6;
+        --accent: #0f766e;
+        --accent-dark: #115e59;
+        --user: #e7f5f2;
+        --assistant: #ffffff;
+        --source: #f1f5f9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .bar,
+      .chat,
+      .composer {
+        width: min(980px, calc(100vw - 32px));
+        margin: 0 auto;
+      }
+
+      .bar {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 720;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #94a3b8;
+      }
+
+      .dot.ok {
+        background: #16a34a;
+      }
+
+      main {
+        overflow: hidden;
+      }
+
+      .chat {
+        height: calc(100vh - 154px);
+        padding: 18px 0;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+      }
+
+      .message {
+        display: grid;
+        gap: 8px;
+        max-width: 820px;
+        margin: 0 0 14px;
+      }
+
+      .message.user {
+        margin-left: auto;
+      }
+
+      .bubble {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px 14px;
+        line-height: 1.55;
+        font-size: 15px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .user .bubble {
+        background: var(--user);
+        border-color: #b7ddd6;
+      }
+
+      .assistant .bubble {
+        background: var(--assistant);
+      }
+
+      .answer {
+        display: grid;
+        gap: 10px;
+      }
+
+      .answer p {
+        margin: 0;
+      }
+
+      .citation {
+        display: inline;
+        color: var(--accent-dark);
+        font-weight: 650;
+      }
+
+      .sources {
+        display: grid;
+        gap: 8px;
+      }
+
+      .source {
+        background: var(--source);
+        border: 1px solid #d8e1ea;
+        border-radius: 8px;
+        padding: 9px 10px;
+        color: #334155;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      details.sources-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 8px 10px;
+      }
+
+      details.sources-panel summary {
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      details.sources-panel[open] summary {
+        margin-bottom: 8px;
+      }
+
+      .source strong {
+        color: #0f172a;
+      }
+
+      footer {
+        border-top: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      .composer {
+        min-height: 88px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: end;
+        gap: 10px;
+        padding: 12px 0;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 54px;
+        max-height: 150px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 13px 14px;
+        color: var(--ink);
+        font: inherit;
+        line-height: 1.4;
+        background: #fff;
+      }
+
+      textarea:focus {
+        outline: 2px solid rgba(15, 118, 110, 0.2);
+        border-color: var(--accent);
+      }
+
+      button {
+        height: 54px;
+        min-width: 94px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 680;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-dark);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      @media (max-width: 640px) {
+        .bar,
+        .chat,
+        .composer {
+          width: min(100vw - 20px, 980px);
+        }
+
+        .bar {
+          height: 58px;
+        }
+
+        h1 {
+          font-size: 18px;
+        }
+
+        .status {
+          font-size: 12px;
+        }
+
+        .chat {
+          height: calc(100vh - 148px);
+          padding: 12px 0;
+        }
+
+        .composer {
+          grid-template-columns: 1fr;
+        }
+
+        button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="bar">
+          <h1>RAG Chat</h1>
+          <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">Checking</span></div>
+        </div>
+      </header>
+
+      <main>
+        <section id="chat" class="chat" aria-live="polite">
+          <article class="message assistant">
+            <div class="bubble">Bạn có thể hỏi về luật phòng chống ma túy, tàng trữ trái phép chất ma túy, hoặc các bài báo nghệ sĩ liên quan đến ma túy.</div>
+          </article>
+        </section>
+      </main>
+
+      <footer>
+        <form id="form" class="composer">
+          <textarea id="message" rows="2" placeholder="Nhập câu hỏi..." autocomplete="off"></textarea>
+          <button id="send" type="submit">Gửi</button>
+        </form>
+      </footer>
+    </div>
+
+    <script>
+      const chat = document.querySelector("#chat");
+      const form = document.querySelector("#form");
+      const input = document.querySelector("#message");
+      const send = document.querySelector("#send");
+      const statusDot = document.querySelector("#statusDot");
+      const statusText = document.querySelector("#statusText");
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function cleanAnswer(text) {
+        return String(text)
+          .replace(/^#\s*/gm, "")
+          .replace(/\*\*Source:\*\*\s*\S+/g, "")
+          .replace(/\*\*Crawled:\*\*\s*[^\s]+/g, "")
+          .replace(/\s+---\s+/g, "\n\n")
+          .replace(/[ \t]{2,}/g, " ")
+          .trim();
+      }
+
+      function formatAnswer(text) {
+        const cleaned = cleanAnswer(text);
+        const paragraphs = cleaned.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+        return paragraphs
+          .map((paragraph) => {
+            const escaped = escapeHtml(paragraph).replace(
+              /(\[[^\]]+\])/g,
+              '<span class="citation">$1</span>',
+            );
+            return `<p>${escaped}</p>`;
+          })
+          .join("");
+      }
+
+      function addMessage(role, text, sources = []) {
+        const article = document.createElement("article");
+        article.className = `message ${role}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        if (role === "assistant") {
+          bubble.innerHTML = `<div class="answer">${formatAnswer(text)}</div>`;
+        } else {
+          bubble.textContent = text;
+        }
+        article.appendChild(bubble);
+
+        if (sources.length) {
+          const panel = document.createElement("details");
+          panel.className = "sources-panel";
+          const summary = document.createElement("summary");
+          summary.textContent = `Nguồn tham khảo (${sources.length})`;
+          panel.appendChild(summary);
+
+          const wrap = document.createElement("div");
+          wrap.className = "sources";
+          sources.slice(0, 5).forEach((source, index) => {
+            const item = document.createElement("div");
+            item.className = "source";
+            item.innerHTML = `<strong>${index + 1}. ${escapeHtml(source.source)}</strong> · ${escapeHtml(source.type)} · score ${source.score}<br>${escapeHtml(source.preview)}`;
+            wrap.appendChild(item);
+          });
+          panel.appendChild(wrap);
+          article.appendChild(panel);
+        }
+
+        chat.appendChild(article);
+        chat.scrollTop = chat.scrollHeight;
+      }
+
+      async function checkHealth() {
+        try {
+          const response = await fetch("/health");
+          const data = await response.json();
+          statusDot.classList.toggle("ok", Boolean(data.ok));
+          statusText.textContent = data.ok ? "Ready" : "Offline";
+        } catch {
+          statusText.textContent = "Offline";
+        }
+      }
+
+      async function ask(message) {
+        send.disabled = true;
+        input.disabled = true;
+        const pending = "Đang truy vấn RAG...";
+        addMessage("assistant", pending);
+        const pendingNode = chat.lastElementChild;
+
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, top_k: 5 }),
+          });
+          const data = await response.json();
+          pendingNode.remove();
+
+          if (!response.ok) {
+            addMessage("assistant", data.error || "Request failed");
+            return;
+          }
+
+          addMessage("assistant", data.answer, data.sources || []);
+        } catch (error) {
+          pendingNode.remove();
+          addMessage("assistant", `Không gọi được API: ${error.message}`);
+        } finally {
+          send.disabled = false;
+          input.disabled = false;
+          input.focus();
+        }
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const message = input.value.trim();
+        if (!message) return;
+        input.value = "";
+        addMessage("user", message);
+        ask(message);
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          form.requestSubmit();
+        }
+      });
+
+      checkHealth();
+    </script>
+  </body>
+</html>
