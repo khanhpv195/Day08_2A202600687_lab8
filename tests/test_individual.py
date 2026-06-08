@@ -720,14 +720,43 @@ class TestTask10(unittest.TestCase):
 
 
 class TestChatUI(unittest.TestCase):
-    """UI chatbot không hiển thị raw retrieval/debug data."""
+    """UI chatbot hiển thị source documents nhưng không lộ raw retrieval/debug data."""
 
-    def test_ui_does_not_render_raw_sources_or_rewrite_debug(self):
+    def test_chat_api_source_summary_hides_raw_debug_data(self):
+        import chat_server
+
+        summary = chat_server._source_summary(
+            {
+                "content": "Nội dung chunk không nên gửi về UI",
+                "score": 0.87,
+                "metadata": {"source": "article_03.md", "type": "news"},
+            }
+        )
+
+        self.assertEqual(summary, {"source": "article_03.md", "type": "news"})
+        self.assertNotIn("preview", summary)
+        self.assertNotIn("score", summary)
+
+    def test_ui_renders_source_names_without_raw_debug_data(self):
         html = (PROJECT_DIR / "web" / "index.html").read_text(encoding="utf-8")
-        self.assertNotIn("sources-panel", html)
+        self.assertIn("source-list", html)
+        self.assertIn("source.source", html)
         self.assertNotIn("source.preview", html)
         self.assertNotIn("source.score", html)
         self.assertNotIn("rewrittenQuery", html)
+
+
+class TestGroupEvaluation(unittest.TestCase):
+    """Group evaluation deliverable phải import và chạy được."""
+
+    def test_eval_pipeline_run_rag_smoke(self):
+        from group_project.evaluation import eval_pipeline
+
+        result = eval_pipeline.run_rag("Luật phòng chống ma túy là gì?", use_reranking=True, top_k=2)
+        self.assertIsInstance(result, dict)
+        self.assertIn("answer", result)
+        self.assertIn("contexts", result)
+        self.assertGreater(len(result["contexts"]), 0)
 
 
 # ===========================================================================

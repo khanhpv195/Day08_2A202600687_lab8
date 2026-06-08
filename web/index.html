@@ -156,6 +156,22 @@
         font-weight: 650;
       }
 
+      .source-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .source-list span {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 2px 8px;
+        background: #f9faf7;
+        line-height: 1.6;
+      }
+
       footer {
         border-top: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.96);
@@ -316,14 +332,32 @@
           .join("");
       }
 
-      function addMessage(role, text) {
+      function uniqueSources(sources) {
+        const seen = new Set();
+        return sources
+          .map((source) => String(source.source || "").trim())
+          .filter((name) => {
+            if (!name || seen.has(name)) return false;
+            seen.add(name);
+            return true;
+          });
+      }
+
+      function renderSourceList(sources) {
+        const names = uniqueSources(sources);
+        if (!names.length) return "";
+        const items = names.map((name) => `<span>${escapeHtml(name)}</span>`).join("");
+        return `<div class="source-list" aria-label="Source documents">${items}</div>`;
+      }
+
+      function addMessage(role, text, sources = []) {
         const article = document.createElement("article");
         article.className = `message ${role}`;
 
         const bubble = document.createElement("div");
         bubble.className = "bubble";
         if (role === "assistant") {
-          bubble.innerHTML = `<div class="answer">${formatAnswer(text)}</div>`;
+          bubble.innerHTML = `<div class="answer">${formatAnswer(text)}${renderSourceList(sources)}</div>`;
         } else {
           bubble.textContent = text;
         }
@@ -365,7 +399,7 @@
             return;
           }
 
-          addMessage("assistant", data.answer);
+          addMessage("assistant", data.answer, data.sources || []);
         } catch (error) {
           pendingNode.remove();
           addMessage("assistant", `Không gọi được API: ${error.message}`);

@@ -246,7 +246,7 @@ jupyter notebook notebooks/demo.ipynb
 |-------|------|-----------|
 | **HyDE** (Hypothetical Document Embeddings) | `src/task_bonus_hyde.py` | `retrieve(query, use_hyde=True)`; sinh pseudo-document (LLM nếu có API key, ngược lại mở rộng từ khoá cùng miền) rồi semantic search |
 | **Conversation memory** (multi-turn) | `src/conversation.py` | Server lưu lịch sử theo `session_id`, `condense_query()` viết lại câu follow-up thành câu hỏi độc lập |
-| **UI hiển thị source + score + câu viết lại** | `web/index.html` | Panel "Nguồn tham khảo" + nút "Trò chuyện mới" (reset memory) + dòng `↻ Hiểu câu hỏi theo ngữ cảnh` |
+| **UI hiển thị citation + source documents tối giản** | `web/index.html` | Hiển thị câu trả lời kèm citation inline + danh sách tên source documents; ẩn score/preview/rewrite debug để demo sạch |
 | **Lexical khác BM25 (TF-IDF)** | `notebooks/demo.ipynb` §8 | Giải thích cơ chế TF-IDF + cosine và khác biệt với BM25 (term saturation, length normalization) |
 
 > HyDE và conversation memory tự động dùng LLM khi có `OPENAI_API_KEY` trong `.env`, và có fallback offline (không cần API key) để chạy được trong phòng lab.

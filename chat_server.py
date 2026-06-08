@@ -19,12 +19,9 @@ PORT = 8008
 
 def _source_summary(source: dict) -> dict:
     metadata = source.get("metadata", {})
-    content = source.get("content", "")
     return {
         "source": metadata.get("source", "unknown"),
         "type": metadata.get("type", "unknown"),
-        "score": round(float(source.get("score", 0.0)), 4),
-        "preview": " ".join(content.split())[:260],
     }
 
 
@@ -107,7 +104,6 @@ class ChatHandler(SimpleHTTPRequestHandler):
                 200,
                 {
                     "answer": answer,
-                    "rewritten_query": query if query != message else None,
                     "sources": [_source_summary(item) for item in result.get("sources", [])],
                 },
             )

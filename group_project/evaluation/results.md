@@ -13,11 +13,11 @@
 
 | Metric | Config A (Hybrid + Reranking) | Config B (Hybrid, no Reranking) | Δ (A−B) |
 |--------|--------------------------|--------------------------|---------|
-| Faithfulness | 0.954 | 0.952 | +0.002 |
-| Answer Relevance | 0.501 | 0.499 | +0.002 |
-| Context Recall | 0.816 | 0.816 | 0.0 |
-| Context Precision | 0.94 | 0.93 | +0.01 |
-| **Average** | **0.803** | **0.799** | **+0.004** |
+| Faithfulness | 0.979 | 0.976 | +0.003 |
+| Answer Relevance | 0.506 | 0.52 | -0.014 |
+| Context Recall | 0.87 | 0.855 | +0.015 |
+| Context Precision | 0.99 | 0.99 | 0.0 |
+| **Average** | **0.836** | **0.835** | **+0.001** |
 
 ---
 
@@ -27,7 +27,7 @@
 
 **Config B:** Hybrid, no Reranking — chạy semantic + lexical, merge bằng RRF, nhưng **bỏ bước reranking**, lấy thẳng top_k sau fusion.
 
-**Kết luận:** Hai config gần như ngang nhau (chênh chỉ 0.004 average — 0.803 vs 0.799). Với corpus nhỏ (8 văn bản) và evaluator dựa trên token-overlap, top_k sau RRF đã đủ tốt nên reranking chưa tạo khác biệt rõ. Reranking dự kiến phát huy tác dụng khi corpus lớn hơn, nhiều chunk gây nhiễu, và khi dùng cross-encoder thật + embedding ngữ nghĩa (thay cho token-overlap) — lúc đó nó mới lọc được noise ở Context Precision.
+**Kết luận:** Hai config gần như ngang nhau (chênh chỉ 0.001 average — 0.836 vs 0.835). Với corpus nhỏ (8 văn bản) và evaluator dựa trên token-overlap, top_k sau RRF đã đủ tốt nên reranking chưa tạo khác biệt rõ. Reranking dự kiến phát huy tác dụng khi corpus lớn hơn, nhiều chunk gây nhiễu, và khi dùng cross-encoder thật + embedding ngữ nghĩa (thay cho token-overlap) — lúc đó nó mới lọc được noise ở Context Precision.
 
 ---
 
@@ -35,9 +35,9 @@
 
 | # | Question | Faithfulness | Relevance | Recall | Precision | Root Cause |
 |---|----------|--------------|-----------|--------|-----------|------------|
-| 1 | Qua các vụ việc nghệ sĩ liên quan đến ma túy, báo chí đ… | 0.944 | 0.444 | 0.368 | 0.6 | Retriever thiếu evidence — chunk liên quan không lọt top_k |
-| 2 | Hình phạt cho tội tàng trữ trái phép chất ma túy theo Đ… | 0.926 | 0.344 | 0.688 | 0.8 | Câu hỏi diễn đạt khác từ khóa trong văn bản |
-| 3 | Vụ việc liên quan đến nghệ sĩ Miu Lê được báo chí phản … | 0.935 | 0.361 | 0.788 | 0.8 | Câu hỏi diễn đạt khác từ khóa trong văn bản |
+| 1 | Hình phạt cho tội tàng trữ trái phép chất ma túy theo Đ… | 0.971 | 0.476 | 0.438 | 1.0 | Câu hỏi diễn đạt khác từ khóa trong văn bản |
+| 2 | Luật Phòng, chống ma túy 2021 phân biệt 'chất gây nghiệ… | 0.956 | 0.544 | 0.522 | 1.0 | Câu hỏi diễn đạt khác từ khóa trong văn bản |
+| 3 | Tội vận chuyển trái phép chất ma túy theo Điều 250 Bộ l… | 0.978 | 0.528 | 0.609 | 1.0 | Câu hỏi diễn đạt khác từ khóa trong văn bản |
 
 ---
 

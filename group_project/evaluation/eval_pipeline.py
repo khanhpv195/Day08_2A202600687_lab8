@@ -23,6 +23,7 @@ hoặc:
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -40,11 +41,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.rag_utils import tokenize, cosine_from_counters  # noqa: E402
 from src.task9_retrieval_pipeline import retrieve  # noqa: E402
-from src.task10_generation import (  # noqa: E402
-    reorder_for_llm,
-    _snippet,
-    _citation,
-)
+from src.task10_generation import reorder_for_llm  # noqa: E402
 
 GOLDEN_DATASET_PATH = Path(__file__).parent / "golden_dataset.json"
 RESULTS_PATH = Path(__file__).parent / "results.md"
@@ -55,6 +52,23 @@ CONFIGS = {
     "B_no_rerank": {"use_reranking": False, "label": "Hybrid, no Reranking"},
 }
 TOP_K = 5
+
+
+def _citation(metadata: dict) -> str:
+    """Citation label used by the offline extractive evaluation answer."""
+    return f"[{metadata.get('source', 'Nguồn không rõ')}]"
+
+
+def _snippet(text: str, max_chars: int = 320) -> str:
+    """Return a compact, content-only snippet for API-key-free evaluation."""
+    cleaned = re.sub(r"^#\s*", "", text, flags=re.MULTILINE)
+    cleaned = re.sub(r"\*\*Source:\*\*\s*\S+", "", cleaned)
+    cleaned = re.sub(r"\*\*Crawled:\*\*\s*[^\s]+", "", cleaned)
+    cleaned = re.sub(r"\s+---\s+", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if len(cleaned) <= max_chars:
+        return cleaned
+    return cleaned[:max_chars].rsplit(" ", 1)[0].strip()
 
 
 def load_golden_dataset() -> list[dict]:
@@ -69,7 +83,7 @@ def load_golden_dataset() -> list[dict]:
 
 def run_rag(question: str, use_reranking: bool, top_k: int = TOP_K) -> dict:
     """
-    Chạy retrieval (Task 9) + sinh answer có citation (logic Task 10) cho 1 config.
+    Chạy retrieval (Task 9) + sinh answer extractive có citation cho 1 config.
 
     Trả về {'answer', 'sources', 'contexts'} để feed vào evaluator.
     """
