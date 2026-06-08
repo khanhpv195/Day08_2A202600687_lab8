@@ -151,10 +151,10 @@ run_dashboard()
 
 ### Deliverable Evaluation
 
-- [ ] File `group_project/evaluation/golden_dataset.json` — 15+ cặp Q&A
-- [ ] File `group_project/evaluation/eval_pipeline.py` — script chạy evaluation
-- [ ] File `group_project/evaluation/results.md` — bảng điểm + phân tích
-- [ ] So sánh A/B ít nhất 2 configs
+- [x] File `group_project/evaluation/golden_dataset.json` — **16** cặp Q&A
+- [x] File `group_project/evaluation/eval_pipeline.py` — script chạy evaluation (4 metrics)
+- [x] File `group_project/evaluation/results.md` — bảng điểm + phân tích + worst performers
+- [x] So sánh A/B 2 configs (hybrid + rerank vs no-rerank)
 
 ---
 
@@ -170,9 +170,40 @@ run_dashboard()
 
 ## Kiến Trúc Hệ Thống
 
+Nhóm chọn **Option B — RAG Chatbot** (`chat_server.py` + `web/index.html`).
+
 ```
-[Vẽ diagram kiến trúc ở đây]
+                          ┌─────────────────────────────┐
+   Người dùng  ──POST──▶  │  web/index.html (chat UI)    │
+                          └──────────────┬──────────────┘
+                                         │  /api/chat (JSON)
+                          ┌──────────────▼──────────────┐
+                          │  chat_server.py (HTTP API)   │
+                          └──────────────┬──────────────┘
+                                         │  generate_with_citation()
+        ┌────────────────────────────────▼────────────────────────────────┐
+        │  Task 10 — Generation: reorder (lost-in-the-middle) + citation     │
+        └────────────────────────────────┬────────────────────────────────┘
+                                         │  retrieve()
+        ┌────────────────────────────────▼────────────────────────────────┐
+        │  Task 9 — Retrieval Pipeline                                       │
+        │    Semantic (T5) ─┐                                                │
+        │                   ├─▶ RRF merge ─▶ Rerank (T7) ─▶ top_k            │
+        │    Lexical/BM25(T6)┘                                               │
+        │    score < threshold ─▶ Fallback: PageIndex vectorless (T8)        │
+        └────────────────────────────────┬────────────────────────────────┘
+                                         │
+        ┌────────────────────────────────▼────────────────────────────────┐
+        │  Task 4 — Chunking + Index (data/standardized/*.md)               │
+        │  Task 1–3 — Thu thập (luật PDF/DOCX) + crawl báo + convert MD     │
+        └───────────────────────────────────────────────────────────────────┘
+
+   Đánh giá:  group_project/evaluation/eval_pipeline.py
+              golden_dataset.json (16 Q&A) ─▶ A/B (rerank vs no-rerank) ─▶ results.md
 ```
+
+**Data flow:** PDF/DOCX luật + JSON bài báo → MarkItDown → markdown chuẩn hoá →
+chunk + index → hybrid retrieval + rerank (fallback PageIndex) → generation có citation.
 
 ---
 
@@ -180,24 +211,45 @@ run_dashboard()
 
 | Thành viên | MSSV | Nhiệm vụ | Trạng thái |
 |-----------|------|----------|------------|
-| | | | |
-| | | | |
-| | | | |
-| | | | |
+| Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Pipeline cá nhân Task 1–10 (35/35 test pass) | ✅ Hoàn thành |
+| Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Golden dataset 16 cặp Q&A (`golden_dataset.json`) | ✅ Hoàn thành |
+| Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Evaluation pipeline + A/B (rerank vs no-rerank) + phân tích worst performers (`eval_pipeline.py`, `results.md`) | ✅ Hoàn thành |
+| Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | RAG chatbot server + UI (`chat_server.py`, `web/index.html`) + diagram kiến trúc | ✅ Hoàn thành |
+| Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Bonus — HyDE (`src/task_bonus_hyde.py`) | ✅ Hoàn thành |
+| Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Bonus — Conversation memory multi-turn (`src/conversation.py`) | ✅ Hoàn thành |
+| Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Bonus — Lexical TF-IDF vs BM25 + Notebook demo (`notebooks/demo.ipynb`) | ✅ Hoàn thành |
 
 ---
 
 ## Hướng Dẫn Chạy
 
 ```bash
-# Cài đặt dependencies
+# 1. Cài đặt dependencies
 pip install -r requirements.txt
 
-# Chạy app
-streamlit run app.py
-# hoặc
-chainlit run app.py
+# 2. Chạy RAG chatbot (server tĩnh + API /api/chat)
+python chat_server.py
+# Mở trình duyệt: http://127.0.0.1:8008
+
+# 3. Chạy evaluation pipeline (sinh group_project/evaluation/results.md)
+python group_project/evaluation/eval_pipeline.py
+
+# 4. (Tuỳ chọn) Mở notebook demo end-to-end
+jupyter notebook notebooks/demo.ipynb
 ```
+
+---
+
+## Bonus đã triển khai
+
+| Bonus | File | Cách dùng |
+|-------|------|-----------|
+| **HyDE** (Hypothetical Document Embeddings) | `src/task_bonus_hyde.py` | `retrieve(query, use_hyde=True)`; sinh pseudo-document (LLM nếu có API key, ngược lại mở rộng từ khoá cùng miền) rồi semantic search |
+| **Conversation memory** (multi-turn) | `src/conversation.py` | Server lưu lịch sử theo `session_id`, `condense_query()` viết lại câu follow-up thành câu hỏi độc lập |
+| **UI hiển thị source + score + câu viết lại** | `web/index.html` | Panel "Nguồn tham khảo" + nút "Trò chuyện mới" (reset memory) + dòng `↻ Hiểu câu hỏi theo ngữ cảnh` |
+| **Lexical khác BM25 (TF-IDF)** | `notebooks/demo.ipynb` §8 | Giải thích cơ chế TF-IDF + cosine và khác biệt với BM25 (term saturation, length normalization) |
+
+> HyDE và conversation memory tự động dùng LLM khi có `OPENAI_API_KEY` trong `.env`, và có fallback offline (không cần API key) để chạy được trong phòng lab.
 
 ---
 

@@ -1,17 +1,82 @@
 [
   {
-    "question": "Hình phạt cho tội tàng trữ trái phép chất ma tuý theo Điều 249 Bộ luật Hình sự?",
-    "expected_answer": "Phạt tù từ 1 đến 5 năm đối với trường hợp tàng trữ từ 1g đến dưới 5g heroin hoặc cocaine, hoặc chất ma tuý khác với khối lượng tương đương.",
-    "expected_context": "Bộ luật Hình sự 2015, Điều 249"
+    "question": "Theo Luật Phòng, chống ma túy 2021, 'chất ma túy' được định nghĩa như thế nào?",
+    "expected_answer": "Chất ma túy là chất gây nghiện, chất hướng thần được quy định trong danh mục chất ma túy do Chính phủ ban hành.",
+    "expected_context": "Luật 73/2021/QH14, Điều 2 khoản 1"
   },
   {
-    "question": "Luật Phòng chống ma tuý 2021 quy định những hình thức cai nghiện nào?",
-    "expected_answer": "Cai nghiện tự nguyện tại gia đình, cai nghiện tự nguyện tại cộng đồng, cai nghiện tự nguyện tại cơ sở cai nghiện, và cai nghiện bắt buộc tại cơ sở cai nghiện.",
-    "expected_context": "Luật Phòng chống ma tuý 2021, Chương V"
+    "question": "Luật Phòng, chống ma túy 2021 phân biệt 'chất gây nghiện' và 'chất hướng thần' ra sao?",
+    "expected_answer": "Chất gây nghiện là chất kích thích hoặc ức chế thần kinh, dễ gây tình trạng nghiện đối với người sử dụng. Chất hướng thần là chất kích thích hoặc ức chế thần kinh hoặc gây ảo giác, nếu sử dụng nhiều lần có thể dẫn tới tình trạng nghiện.",
+    "expected_context": "Luật 73/2021/QH14, Điều 2 khoản 2 và khoản 3"
   },
   {
-    "question": "Danh mục các chất ma tuý thuộc nhóm I theo quy định pháp luật Việt Nam gồm những chất nào?",
-    "expected_answer": "Nhóm I gồm các chất ma tuý tuyệt đối cấm sử dụng trong y học và đời sống, bao gồm heroin, cocaine, methamphetamine, MDMA (ecstasy), cannabis (cần sa), và các chất tương tự.",
-    "expected_context": "Nghị định 57/2022/NĐ-CP, Phụ lục I"
+    "question": "'Tiền chất' theo Luật Phòng, chống ma túy 2021 là gì?",
+    "expected_answer": "Tiền chất là hóa chất không thể thiếu được trong quá trình điều chế, sản xuất chất ma túy, được quy định trong danh mục tiền chất do Chính phủ ban hành.",
+    "expected_context": "Luật 73/2021/QH14, Điều 2 khoản 4"
+  },
+  {
+    "question": "Luật Phòng, chống ma túy 2021 quy định những biện pháp cai nghiện ma túy nào?",
+    "expected_answer": "Biện pháp cai nghiện ma túy bao gồm cai nghiện tự nguyện và cai nghiện bắt buộc. Cai nghiện tự nguyện được thực hiện tại gia đình, cộng đồng hoặc tại cơ sở cai nghiện; cai nghiện bắt buộc được thực hiện tại cơ sở cai nghiện ma túy công lập.",
+    "expected_context": "Luật 73/2021/QH14, Điều 28"
+  },
+  {
+    "question": "Quy trình cai nghiện ma túy theo Luật 2021 gồm mấy giai đoạn và là những giai đoạn nào?",
+    "expected_answer": "Quy trình cai nghiện gồm 5 giai đoạn: (a) tiếp nhận, phân loại; (b) điều trị cắt cơn, giải độc, điều trị rối loạn tâm thần và các bệnh lý khác; (c) giáo dục, tư vấn, phục hồi hành vi, nhân cách; (d) lao động trị liệu, học nghề; (đ) chuẩn bị tái hòa nhập cộng đồng.",
+    "expected_context": "Luật 73/2021/QH14, Điều 29 khoản 1"
+  },
+  {
+    "question": "Thời hạn cai nghiện ma túy tự nguyện tại gia đình, cộng đồng là bao lâu?",
+    "expected_answer": "Thời hạn cai nghiện ma túy tự nguyện tại gia đình, cộng đồng là từ đủ 06 tháng đến 12 tháng.",
+    "expected_context": "Luật 73/2021/QH14, Điều 30 khoản 2"
+  },
+  {
+    "question": "Nêu một số hành vi bị nghiêm cấm theo Luật Phòng, chống ma túy 2021.",
+    "expected_answer": "Một số hành vi bị nghiêm cấm gồm: trồng cây có chứa chất ma túy; sản xuất, tàng trữ, vận chuyển, mua bán trái phép chất ma túy và tiền chất; sử dụng, tổ chức sử dụng trái phép chất ma túy; cưỡng bức, lôi kéo người khác sử dụng; và kỳ thị người sử dụng trái phép chất ma túy, người cai nghiện, người sau cai nghiện.",
+    "expected_context": "Luật 73/2021/QH14, Điều 5"
+  },
+  {
+    "question": "Nghị định 105/2021/NĐ-CP được ban hành khi nào và nhằm mục đích gì?",
+    "expected_answer": "Nghị định 105/2021/NĐ-CP được Chính phủ ban hành ngày 04 tháng 12 năm 2021, quy định chi tiết và hướng dẫn thi hành một số điều của Luật Phòng, chống ma túy, bao gồm công tác phối hợp của các cơ quan chuyên trách phòng, chống tội phạm về ma túy, kiểm soát các hoạt động hợp pháp liên quan đến ma túy và quản lý người sử dụng trái phép chất ma túy.",
+    "expected_context": "Nghị định 105/2021/NĐ-CP, Điều 1"
+  },
+  {
+    "question": "Bộ luật Hình sự phân loại tội phạm thành mấy loại?",
+    "expected_answer": "Tội phạm được phân thành 04 loại: tội phạm ít nghiêm trọng (mức cao nhất của khung hình phạt đến 03 năm tù), tội phạm nghiêm trọng, tội phạm rất nghiêm trọng và tội phạm đặc biệt nghiêm trọng.",
+    "expected_context": "Luật 12/2017/QH14 sửa đổi Bộ luật Hình sự, Điều 9"
+  },
+  {
+    "question": "Người từ đủ 12 tuổi đến dưới 18 tuổi được xác định là nghiện ma túy thì ai có trách nhiệm đăng ký cai nghiện tự nguyện?",
+    "expected_answer": "Đối với người từ đủ 12 tuổi đến dưới 18 tuổi, cha, mẹ, người giám hộ hoặc người đại diện hợp pháp có trách nhiệm đăng ký cai nghiện ma túy tự nguyện với Ủy ban nhân dân cấp xã nơi cư trú.",
+    "expected_context": "Luật 73/2021/QH14, Điều 27"
+  },
+  {
+    "question": "Ca sĩ Chu Bin bị tạm giữ vì hành vi gì và do cơ quan nào thực hiện?",
+    "expected_answer": "Ca sĩ Chu Bin (tên thật Chu Đăng Thanh) bị Công an Quận 10, TP.HCM tạm giữ để điều tra về hành vi tổ chức, sử dụng trái phép chất ma túy, vào tháng 6/2024.",
+    "expected_context": "Báo Thanh Niên, 2024 (article_01)"
+  },
+  {
+    "question": "DJ Thái Hoàng bị bắt vì lý do gì và ở đâu?",
+    "expected_answer": "DJ Thái Hoàng (Trần Thái Hoàng, 32 tuổi, thường trú tại Hải Phòng) bị Công an tỉnh Hải Dương bắt quả tang về hành vi tàng trữ trái phép chất ma túy, vào ngày 25/4/2023.",
+    "expected_context": "Báo Thanh Niên, 2023 (article_02)"
+  },
+  {
+    "question": "Vụ việc liên quan đến nghệ sĩ Miu Lê được báo chí phản ánh như thế nào?",
+    "expected_answer": "Theo kết quả xét nghiệm, Miu Lê dương tính với ma túy và bị bắt quả tang dùng ma túy; cơ quan chức năng tiếp tục xác minh, xử lý theo quy định. Một số chương trình có sự tham gia của cô đã bị gỡ khỏi nền tảng phát sóng.",
+    "expected_context": "Báo Thanh Niên, 2026 (article_03)"
+  },
+  {
+    "question": "Nữ ca sĩ Trung Quốc Đỗ Tuyết Nhi bị xử lý ra sao vì liên quan đến ma túy?",
+    "expected_answer": "Đỗ Tuyết Nhi bị kết án 1 năm tù giam vì mua ma túy, thi hành từ tháng 1/2021 đến tháng 1/2022, và bị phạt 10.000 nhân dân tệ. Sau khi ra tù, cô còn chịu lệnh 'phong sát' từ Hiệp hội nghệ thuật biểu diễn Trung Quốc.",
+    "expected_context": "Báo Thanh Niên, 2022 (article_04)"
+  },
+  {
+    "question": "Nam ca sĩ Mao Ninh của Trung Quốc bị bắt vì lý do gì?",
+    "expected_answer": "Nam ca sĩ Mao Ninh (47 tuổi) bị cảnh sát Bắc Kinh bắt vì tội tàng trữ và sử dụng trái phép chất ma túy; kết quả xét nghiệm nước tiểu cho thấy anh từng sử dụng ma túy. Vụ việc xảy ra vào tháng 11/2015.",
+    "expected_context": "Báo Thanh Niên, 2015 (article_05)"
+  },
+  {
+    "question": "Qua các vụ việc nghệ sĩ liên quan đến ma túy, báo chí đặt ra vấn đề gì về trách nhiệm của người nổi tiếng?",
+    "expected_answer": "Báo chí cho rằng các vụ việc nghệ sĩ dính líu ma túy gióng lên hồi chuông cảnh tỉnh về trách nhiệm và ý thức giữ gìn hình ảnh của người làm nghệ thuật, đồng thời cho thấy chỉ một hành vi lệch chuẩn liên quan đến ma túy cũng có thể khiến hình ảnh và sự nghiệp gây dựng nhiều năm sụp đổ nhanh chóng, kèm theo hệ lụy như bị gỡ chương trình, phong sát.",
+    "expected_context": "Báo Thanh Niên, 2026 (article_03)"
   }
 ]
