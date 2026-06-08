@@ -86,6 +86,27 @@
         background: #16a34a;
       }
 
+      button.ghost {
+        height: 30px;
+        min-width: 0;
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 600;
+        background: transparent;
+        color: var(--accent-dark);
+        border: 1px solid var(--line);
+      }
+
+      button.ghost:hover {
+        background: var(--user);
+      }
+
+      .rewrite {
+        color: var(--muted);
+        font-size: 12px;
+        font-style: italic;
+      }
+
       main {
         overflow: hidden;
       }
@@ -272,7 +293,10 @@
       <header>
         <div class="bar">
           <h1>RAG Chat</h1>
-          <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">Checking</span></div>
+          <div class="status">
+            <button id="newChat" type="button" class="ghost">+ Trò chuyện mới</button>
+            <span id="statusDot" class="dot"></span><span id="statusText">Checking</span>
+          </div>
         </div>
       </header>
 
@@ -299,6 +323,10 @@
       const send = document.querySelector("#send");
       const statusDot = document.querySelector("#statusDot");
       const statusText = document.querySelector("#statusText");
+      const newChat = document.querySelector("#newChat");
+
+      // Phiên hội thoại — dùng cho conversation memory ở server.
+      const sessionId = "s-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
 
       function escapeHtml(value) {
         return String(value)
@@ -332,7 +360,7 @@
           .join("");
       }
 
-      function addMessage(role, text, sources = []) {
+      function addMessage(role, text, sources = [], rewrittenQuery = null) {
         const article = document.createElement("article");
         article.className = `message ${role}`;
 
@@ -344,6 +372,13 @@
           bubble.textContent = text;
         }
         article.appendChild(bubble);
+
+        if (rewrittenQuery) {
+          const note = document.createElement("div");
+          note.className = "rewrite";
+          note.textContent = `↻ Hiểu câu hỏi theo ngữ cảnh: "${rewrittenQuery}"`;
+          article.appendChild(note);
+        }
 
         if (sources.length) {
           const panel = document.createElement("details");
@@ -390,7 +425,7 @@
           const response = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, top_k: 5 }),
+            body: JSON.stringify({ message, top_k: 5, session_id: sessionId, use_memory: true }),
           });
           const data = await response.json();
           pendingNode.remove();
@@ -400,7 +435,7 @@
             return;
           }
 
-          addMessage("assistant", data.answer, data.sources || []);
+          addMessage("assistant", data.answer, data.sources || [], data.rewritten_query);
         } catch (error) {
           pendingNode.remove();
           addMessage("assistant", `Không gọi được API: ${error.message}`);
@@ -425,6 +460,22 @@
           event.preventDefault();
           form.requestSubmit();
         }
+      });
+
+      newChat.addEventListener("click", async () => {
+        try {
+          await fetch("/api/reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sessionId }),
+          });
+        } catch {}
+        chat.innerHTML = "";
+        addMessage(
+          "assistant",
+          "Bắt đầu cuộc trò chuyện mới. Bạn có thể hỏi về luật phòng chống ma túy hoặc các bài báo nghệ sĩ liên quan đến ma túy.",
+        );
+        input.focus();
       });
 
       checkHealth();

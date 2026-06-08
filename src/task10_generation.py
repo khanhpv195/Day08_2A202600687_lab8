@@ -16,6 +16,43 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .task9_retrieval_pipeline import retrieve
+from .rag_utils import text_similarity
+
+
+# =============================================================================
+# RELEVANCE GATE — tránh trả lời câu ngoài phạm vi tri thức
+# =============================================================================
+
+# Nếu độ tương đồng giữa query và chunk liên quan nhất < ngưỡng này ⇒ coi như
+# không có evidence → trả về "không thể xác minh" (yêu cầu Task 10).
+# Đo thực nghiệm: câu in-scope sim >= 0.41, câu out-of-scope sim <= 0.28 → chọn 0.35.
+RELEVANCE_THRESHOLD = 0.35
+
+# Lưới an toàn cho câu ngắn nhiều từ đệm ("Còn vụ X thì sao?"): nếu MỌI từ khóa
+# nội dung của câu hỏi đều xuất hiện trong nguồn, cho qua dù sim hơi thấp.
+SOFT_SIM_FLOOR = 0.30
+
+# Từ đệm/từ dừng không tính là "từ khóa nội dung".
+_GATE_STOPWORDS = {
+    "còn", "vụ", "thì", "sao", "là", "gì", "nào", "của", "và", "có", "các",
+    "này", "đó", "về", "cho", "ai", "bao", "nhiêu", "như", "thế", "được",
+    "vì", "lý", "do", "đã", "sẽ", "khi", "tại", "theo", "một", "những",
+}
+
+CANNOT_VERIFY = "Tôi không thể xác minh thông tin này từ nguồn hiện có."
+
+
+def _content_coverage(query: str, chunks: list[dict]) -> float:
+    """Tỉ lệ từ khóa nội dung của câu hỏi xuất hiện trong các chunk truy hồi."""
+    from .rag_utils import tokenize
+
+    keywords = {t for t in tokenize(query) if len(t) > 1 and t not in _GATE_STOPWORDS}
+    if not keywords:
+        return 0.0
+    corpus = set()
+    for chunk in chunks:
+        corpus |= set(tokenize(chunk.get("content", "")))
+    return sum(1 for kw in keywords if kw in corpus) / len(keywords)
 
 
 # =============================================================================
@@ -123,20 +160,41 @@ def _citation(metadata: dict) -> str:
     return f"[{label}]"
 
 
-def _first_sentence(text: str) -> str:
-    sentences = re.split(r"(?<=[.!?。])\s+", text.strip())
+# Dấu hiệu đoạn biểu mẫu pháp lý cần loại: chuỗi chấm/ellipsis, ô trống, gạch dưới.
+_FORM_NOISE = re.compile(r"[.…]{4,}|□|_{4,}")
+
+
+def _is_meaningful(sentence: str) -> bool:
+    """Loại câu rác: heading, biểu mẫu nhiều dấu chấm/ô trống/gạch dưới."""
+    if sentence.startswith("#") or _FORM_NOISE.search(sentence):
+        return False
+    letters = sum(ch.isalpha() for ch in sentence)
+    return len(sentence) >= 40 and letters / max(1, len(sentence)) > 0.55
+
+
+def _snippet(text: str, max_sentences: int = 2, max_chars: int = 300) -> str:
+    """Lấy tối đa `max_sentences` câu có nghĩa đầu tiên làm trích đoạn trả lời."""
+    text = re.sub(r"^#.*$", "", text, flags=re.MULTILINE).strip()
+    sentences = re.split(r"(?<=[.!?。])\s+", text)
+    picked: list[str] = []
     for sentence in sentences:
         cleaned = re.sub(r"\s+", " ", sentence).strip()
-        if len(cleaned) >= 40:
-            return cleaned
-    return re.sub(r"\s+", " ", text.strip())[:240]
+        if _is_meaningful(cleaned):
+            picked.append(cleaned)
+        if len(picked) >= max_sentences:
+            break
+    if picked:
+        return " ".join(picked)[:max_chars].strip()
+    # Không có câu nào "sạch": chỉ trả về nguyên văn nếu nó không phải biểu mẫu rác.
+    fallback = re.sub(r"\s+", " ", text).strip()
+    return "" if _FORM_NOISE.search(fallback) else fallback[:max_chars]
 
 
 # =============================================================================
 # GENERATION
 # =============================================================================
 
-def generate_with_citation(query: str, top_k: int = TOP_K) -> dict:
+def generate_with_citation(query: str, top_k: int = TOP_K, gate_query: str | None = None) -> dict:
     """
     End-to-end RAG generation có citation.
 
@@ -149,7 +207,10 @@ def generate_with_citation(query: str, top_k: int = TOP_K) -> dict:
         6. Return answer + sources
 
     Args:
-        query: Câu hỏi của user
+        query: Câu hỏi dùng để retrieve (có thể đã được rewrite theo ngữ cảnh)
+        gate_query: Câu hỏi gốc của user dùng để chấm relevance gate. Khi câu đã
+            được rewrite dài dòng, chấm theo câu gốc ngắn gọn để tránh chặn nhầm.
+            Mặc định = query.
 
     Returns:
         {
@@ -159,18 +220,33 @@ def generate_with_citation(query: str, top_k: int = TOP_K) -> dict:
         }
     """
     chunks = retrieve(query, top_k=top_k)
+    gate_q = gate_query or query
+
+    # Relevance gate: nếu không chunk nào đủ liên quan tới câu hỏi → không bịa đáp án.
+    # Chấm theo câu gốc (gate_q) để câu rewrite dài dòng không làm loãng tín hiệu.
+    best_relevance = max(
+        (text_similarity(gate_q, c.get("content", "")) for c in chunks),
+        default=0.0,
+    )
+    coverage = _content_coverage(gate_q, chunks)
+    # Đủ liên quan khi: sim qua ngưỡng, HOẶC sim sàn mềm + phủ trọn từ khóa nội dung.
+    relevant = best_relevance >= RELEVANCE_THRESHOLD or (
+        best_relevance >= SOFT_SIM_FLOOR and coverage >= 0.999
+    )
+    if not chunks or not relevant:
+        return {"answer": CANNOT_VERIFY, "sources": [], "retrieval_source": "none"}
+
     reordered = reorder_for_llm(chunks)
     format_context(reordered)
 
-    if not reordered:
-        answer = "I cannot verify this information from the provided context."
-    else:
-        lines = []
-        for chunk in reordered[: min(3, len(reordered))]:
-            sentence = _first_sentence(chunk.get("content", ""))
-            citation = _citation(chunk.get("metadata", {}))
-            lines.append(f"{sentence} {citation}")
-        answer = "\n\n".join(lines) if lines else "I cannot verify this information from the provided context."
+    lines = []
+    for chunk in reordered[: min(3, len(reordered))]:
+        sentence = _snippet(chunk.get("content", ""))
+        if not sentence:
+            continue
+        citation = _citation(chunk.get("metadata", {}))
+        lines.append(f"{sentence} {citation}")
+    answer = "\n\n".join(lines) if lines else CANNOT_VERIFY
 
     return {
         "answer": answer,

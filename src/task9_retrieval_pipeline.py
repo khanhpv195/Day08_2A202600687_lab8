@@ -16,6 +16,7 @@ from .task5_semantic_search import semantic_search
 from .task6_lexical_search import lexical_search
 from .task7_reranking import rerank, rerank_rrf
 from .task8_pageindex_vectorless import pageindex_search
+from .task_bonus_hyde import hyde_search
 
 
 # =============================================================================
@@ -32,6 +33,7 @@ def retrieve(
     top_k: int = DEFAULT_TOP_K,
     score_threshold: float = SCORE_THRESHOLD,
     use_reranking: bool = True,
+    use_hyde: bool = False,
 ) -> list[dict]:
     """
     Retrieval pipeline hoàn chỉnh với fallback logic.
@@ -52,6 +54,7 @@ def retrieve(
         top_k: Số lượng kết quả cuối cùng
         score_threshold: Ngưỡng điểm tối thiểu cho hybrid results
         use_reranking: Có áp dụng reranking hay không
+        use_hyde: Bật HyDE — dùng hypothetical document cho nhánh dense (bonus)
 
     Returns:
         List of {
@@ -61,7 +64,11 @@ def retrieve(
             'source': str  # 'hybrid' hoặc 'pageindex'
         }
     """
-    dense_results = semantic_search(query, top_k=top_k * 2)
+    dense_results = (
+        hyde_search(query, top_k=top_k * 2)
+        if use_hyde
+        else semantic_search(query, top_k=top_k * 2)
+    )
     sparse_results = lexical_search(query, top_k=top_k * 2)
 
     merged = rerank_rrf([dense_results, sparse_results], top_k=top_k * 2)
