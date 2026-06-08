@@ -9,9 +9,11 @@ Mỗi task được test riêng. Tổng: 50 điểm.
 """
 
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 # Project root
 PROJECT_DIR = Path(__file__).parent.parent
@@ -503,6 +505,24 @@ class TestTask9(unittest.TestCase):
         except NotImplementedError:
             self.skipTest("Chưa implement")
 
+    def test_unaccented_legal_query_retrieves_law(self):
+        """Query không dấu vẫn retrieve được Luật Phòng, chống ma túy."""
+        retrieve_fn = self._import_task9()
+        results = retrieve_fn("cau luat phong chong ma tuy la gi", top_k=5)
+        sources = [r.get("metadata", {}).get("source", "") for r in results]
+        self.assertIn("73_2021_QH14_m_445185.md", sources)
+
+    def test_artist_responsibility_query_retrieves_news(self):
+        """Query về trách nhiệm người nổi tiếng phải lấy nguồn báo chí liên quan."""
+        retrieve_fn = self._import_task9()
+        query = (
+            "Qua các vụ việc nghệ sĩ liên quan đến ma túy, báo chí đặt ra vấn đề gì "
+            "về trách nhiệm của người nổi tiếng?"
+        )
+        results = retrieve_fn(query, top_k=5)
+        sources = [r.get("metadata", {}).get("source", "") for r in results]
+        self.assertIn("article_03.md", sources)
+
 
 # ===========================================================================
 # Task 10 — Generation có Citation (4 điểm)
@@ -548,6 +568,19 @@ class TestTask10(unittest.TestCase):
         except NotImplementedError:
             self.skipTest("format_context chưa implement")
 
+    def test_format_context_declares_exact_citation_label(self):
+        """Context phải chỉ rõ citation label để LLM không cite kiểu Document 1."""
+        _, _, format_ctx = self._import_task10()
+        chunks = [
+            {
+                "content": "Luật quy định về cai nghiện ma túy.",
+                "score": 0.9,
+                "metadata": {"source": "73_2021_QH14_m_445185.md", "type": "legal"},
+            }
+        ]
+        ctx = format_ctx(chunks)
+        self.assertIn("Citation to use: [73_2021_QH14_m_445185.md]", ctx)
+
     def test_generate_returns_dict_with_answer(self):
         """generate_with_citation() trả về dict có 'answer'."""
         generate, _, _ = self._import_task10()
@@ -562,6 +595,139 @@ class TestTask10(unittest.TestCase):
         except Exception as e:
             # API key missing, etc — still check structure exists
             self.skipTest(f"Generation error (có thể thiếu API key): {e}")
+
+    def test_generate_calls_llm_with_retrieved_context(self):
+        """generate_with_citation() phải gọi LLM với context đã retrieve."""
+        from src import task10_generation as generation
+
+        fake_chunks = [
+            {
+                "content": (
+                    "Luật Phòng, chống ma túy 2021 quy định về cai nghiện ma túy "
+                    "tự nguyện, cai nghiện bắt buộc và trách nhiệm hỗ trợ."
+                ),
+                "score": 0.92,
+                "metadata": {"source": "73_2021_QH14_m_445185.md", "type": "legal"},
+                "source": "hybrid",
+            }
+        ]
+        fake_response = Mock()
+        fake_response.choices = [
+            Mock(
+                message=Mock(
+                    content=(
+                        "Luật Phòng, chống ma túy 2021 quy định về cai nghiện ma túy "
+                        "tự nguyện và trách nhiệm hỗ trợ. [73_2021_QH14_m_445185.md]"
+                    )
+                )
+            )
+        ]
+        fake_client = Mock()
+        fake_client.chat.completions.create.return_value = fake_response
+
+        with (
+            patch.object(generation, "retrieve", return_value=fake_chunks),
+            patch.object(generation, "OpenAI", return_value=fake_client, create=True),
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}),
+        ):
+            result = generation.generate_with_citation("cai nghiện ma túy", top_k=1)
+
+        fake_client.chat.completions.create.assert_called_once()
+        call_kwargs = fake_client.chat.completions.create.call_args.kwargs
+        joined_messages = "\n".join(message["content"] for message in call_kwargs["messages"])
+        self.assertIn("Luật Phòng, chống ma túy 2021", joined_messages)
+        self.assertIn("cai nghiện ma túy", joined_messages)
+        self.assertIn("cai nghiện ma túy tự nguyện", result["answer"])
+        self.assertIn("[73_2021_QH14_m_445185.md]", result["answer"])
+
+    def test_llm_prompt_forbids_inference_beyond_context(self):
+        """Prompt phải cấm LLM suy luận hoặc thêm ý ngoài context."""
+        from src import task10_generation as generation
+
+        prompt = generation.SYSTEM_PROMPT.lower()
+        self.assertIn("do not infer", prompt)
+        self.assertIn("do not add interpretations", prompt)
+        self.assertIn("quote or paraphrase only", prompt)
+
+    def test_generate_accepts_unaccented_legal_query(self):
+        """Câu hỏi không dấu vẫn qua relevance gate và gọi LLM."""
+        from src import task10_generation as generation
+
+        fake_response = Mock()
+        fake_response.choices = [
+            Mock(message=Mock(content="Luật Phòng, chống ma túy là... [73_2021_QH14_m_445185.md]"))
+        ]
+        fake_client = Mock()
+        fake_client.chat.completions.create.return_value = fake_response
+
+        with (
+            patch.object(generation, "OpenAI", return_value=fake_client, create=True),
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}),
+        ):
+            result = generation.generate_with_citation("cau luat phong chong ma tuy la gi", top_k=3)
+
+        fake_client.chat.completions.create.assert_called_once()
+        self.assertNotEqual(result["answer"], generation.CANNOT_VERIFY)
+        self.assertGreater(len(result["sources"]), 0)
+
+    def test_generate_repairs_wrong_citation_and_drops_unsupported_claims(self):
+        """Post-check phải sửa citation sai và loại claim không có trong context."""
+        from src import task10_generation as generation
+
+        fake_chunks = [
+            {
+                "content": (
+                    "Việc một nghệ sĩ nổi tiếng bị nhắc tên trong vụ việc nghiêm trọng "
+                    "như vậy đủ gióng lên hồi chuông cảnh báo về trách nhiệm và ý thức "
+                    "giữ gìn hình ảnh của người làm nghệ thuật."
+                ),
+                "score": 0.91,
+                "metadata": {"source": "article_03.md", "type": "news"},
+                "source": "hybrid",
+            },
+            {
+                "content": "DJ Thái Hoàng là gương mặt có tiếng trong giới DJ.",
+                "score": 0.7,
+                "metadata": {"source": "article_02.md", "type": "news"},
+                "source": "hybrid",
+            },
+        ]
+        fake_response = Mock()
+        fake_response.choices = [
+            Mock(
+                message=Mock(
+                    content=(
+                        "- Việc một nghệ sĩ nổi tiếng bị nhắc tên cảnh báo về trách nhiệm "
+                        "giữ gìn hình ảnh của người làm nghệ thuật. [article_02.md]\n"
+                        "- Điều này tác động đến cộng đồng và người hâm mộ. [article_03.md]"
+                    )
+                )
+            )
+        ]
+        fake_client = Mock()
+        fake_client.chat.completions.create.return_value = fake_response
+
+        with (
+            patch.object(generation, "retrieve", return_value=fake_chunks),
+            patch.object(generation, "OpenAI", return_value=fake_client, create=True),
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}),
+        ):
+            result = generation.generate_with_citation("trách nhiệm người nổi tiếng", top_k=2)
+
+        self.assertIn("[article_03.md]", result["answer"])
+        self.assertNotIn("[article_02.md]", result["answer"])
+        self.assertNotIn("người hâm mộ", result["answer"])
+
+
+class TestChatUI(unittest.TestCase):
+    """UI chatbot không hiển thị raw retrieval/debug data."""
+
+    def test_ui_does_not_render_raw_sources_or_rewrite_debug(self):
+        html = (PROJECT_DIR / "web" / "index.html").read_text(encoding="utf-8")
+        self.assertNotIn("sources-panel", html)
+        self.assertNotIn("source.preview", html)
+        self.assertNotIn("source.score", html)
+        self.assertNotIn("rewrittenQuery", html)
 
 
 # ===========================================================================

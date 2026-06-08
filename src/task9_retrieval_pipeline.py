@@ -17,6 +17,7 @@ from .task6_lexical_search import lexical_search
 from .task7_reranking import rerank, rerank_rrf
 from .task8_pageindex_vectorless import pageindex_search
 from .task_bonus_hyde import hyde_search
+from .rag_utils import tokenize
 
 
 # =============================================================================
@@ -26,6 +27,36 @@ from .task_bonus_hyde import hyde_search
 SCORE_THRESHOLD = 0.3   # Nếu best score < threshold → fallback PageIndex
 DEFAULT_TOP_K = 5
 RERANK_METHOD = "cross_encoder"  # "cross_encoder" | "mmr" | "rrf"
+
+_NEWS_INTENT_TERMS = {
+    "nghe", "si", "ca", "dj", "showbiz", "bao", "chi", "noi", "tieng",
+    "nguoi", "trach", "nhiem", "hinh", "anh", "miu", "le", "thai", "hoang",
+}
+
+
+def _has_news_intent(query: str) -> bool:
+    tokens = set(tokenize(query))
+    return bool(tokens & _NEWS_INTENT_TERMS) and (
+        {"nghe", "si"} <= tokens
+        or {"bao", "chi"} <= tokens
+        or {"noi", "tieng"} <= tokens
+        or "showbiz" in tokens
+        or "dj" in tokens
+        or {"ca", "si"} <= tokens
+    )
+
+
+def _apply_intent_boost(query: str, results: list[dict]) -> list[dict]:
+    if not _has_news_intent(query):
+        return results
+    boosted = []
+    for item in results:
+        copy = item.copy()
+        if copy.get("metadata", {}).get("type") == "news":
+            copy["score"] = float(copy.get("score", 0.0)) + 0.12
+        boosted.append(copy)
+    boosted.sort(key=lambda item: item.get("score", 0.0), reverse=True)
+    return boosted
 
 
 def retrieve(
@@ -76,7 +107,8 @@ def retrieve(
         item["source"] = "hybrid"
 
     if use_reranking and merged:
-        final_results = rerank(query, merged, top_k=top_k, method=RERANK_METHOD)
+        final_results = rerank(query, merged, top_k=top_k * 2, method=RERANK_METHOD)
+        final_results = _apply_intent_boost(query, final_results)[:top_k]
         for item in final_results:
             item["source"] = "hybrid"
     else:

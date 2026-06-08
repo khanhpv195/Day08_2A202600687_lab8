@@ -9,6 +9,7 @@ from __future__ import annotations
 import html
 import math
 import re
+import unicodedata
 from collections import Counter
 from pathlib import Path
 
@@ -18,9 +19,16 @@ STANDARDIZED_DIR = PROJECT_DIR / "data" / "standardized"
 TOKEN_RE = re.compile(r"[\wÀ-ỹ]+", re.UNICODE)
 
 
+def normalize_text(text: str) -> str:
+    """Lowercase Vietnamese text and strip accents for robust local matching."""
+    lowered = text.lower().replace("đ", "d")
+    decomposed = unicodedata.normalize("NFD", lowered)
+    return "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+
+
 def tokenize(text: str) -> list[str]:
-    """Lowercase word tokenizer that keeps Vietnamese characters."""
-    return TOKEN_RE.findall(text.lower())
+    """Word tokenizer with accent-insensitive Vietnamese normalization."""
+    return TOKEN_RE.findall(normalize_text(text))
 
 
 # Marker bắt đầu phần footer/bình luận của trang báo — cắt bỏ từ đây trở đi.

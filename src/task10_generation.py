@@ -15,8 +15,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+try:
+    from openai import OpenAI
+except ImportError:  # pragma: no cover - handled at runtime for missing optional dep
+    OpenAI = None
+
 from .task9_retrieval_pipeline import retrieve
-from .rag_utils import text_similarity
+from .rag_utils import text_similarity, tokenize
 
 
 # =============================================================================
@@ -40,6 +45,13 @@ _GATE_STOPWORDS = {
 }
 
 CANNOT_VERIFY = "Tôi không thể xác minh thông tin này từ nguồn hiện có."
+
+_ANSWER_CITATION_RE = re.compile(r"\[[^\]]+\]")
+_SUPPORT_STOPWORDS = {
+    "la", "gi", "cua", "va", "co", "cac", "nhung", "mot", "nay", "do", "ve",
+    "cho", "theo", "trong", "ngoai", "ra", "thi", "duoc", "bi", "voi", "tu",
+    "den", "de", "khi", "neu", "khong", "dieu", "viec", "nay", "do", "qua",
+}
 
 
 def _content_coverage(query: str, chunks: list[dict]) -> float:
@@ -68,28 +80,115 @@ TOP_K = 5
 TOP_P = 0.9
 
 # temperature: Độ ngẫu nhiên của output
-# Chọn 0.3 vì: RAG cần factual, ít sáng tạo
-TEMPERATURE = 0.3
+# Chọn 0.0 vì: RAG cần bám nguồn, không sáng tạo thêm ngoài context.
+TEMPERATURE = 0.0
+
+# Model gọi cho bước generation. Có thể override bằng OPENAI_MODEL trong .env.
+LLM_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 
 # =============================================================================
 # SYSTEM PROMPT
 # =============================================================================
 
-SYSTEM_PROMPT = """Answer the following question comprehensively in Vietnamese.
-For every statement of fact or claim, immediately insert a citation in brackets
-linking to the specific source (e.g., [Luật Phòng chống ma tuý 2021, Điều 3]
-or [VnExpress, 2024]).
+SYSTEM_PROMPT = """You are a strict extractive RAG answerer.
+Answer in Vietnamese using ONLY the retrieved CONTEXT.
 
-If the information is not explicitly stated in the provided context or knowledge
-base, state 'Tôi không thể xác minh thông tin này từ nguồn hiện có' rather than
-guessing.
+Grounding rules:
+- Quote or paraphrase only statements that are explicitly present in CONTEXT.
+- Do not infer, generalize, or use outside knowledge.
+- Do not add interpretations, lessons, impacts, causes, or audiences unless the
+  same idea is explicitly stated in CONTEXT.
+- If CONTEXT only partially answers the question, answer only that partial part.
+- If CONTEXT does not explicitly support an answer, say exactly:
+  'Tôi không thể xác minh thông tin này từ nguồn hiện có.'
+- Every factual sentence MUST cite the exact source filename shown as
+  "Citation to use" in the same document block.
+- Do NOT cite generic labels like [Document 1] or [Source 1].
+- Do NOT attach a citation from one document to a claim from another document.
 
-Rules:
-- Only use information from the provided context
-- Every factual claim MUST have a citation
-- If context is insufficient, say so clearly
-- Structure your answer with clear paragraphs"""
+Output rules:
+- Be concise.
+- Prefer 2-4 short bullet points.
+- No introduction, no conclusion, no extra commentary."""
+
+
+def _call_llm(context: str, query: str) -> str:
+    """Generate the final answer from retrieved context using OpenAI."""
+    if OpenAI is None:
+        raise RuntimeError("openai package is not installed")
+    if not os.getenv("OPENAI_API_KEY"):
+        raise RuntimeError("OPENAI_API_KEY is not configured")
+
+    client = OpenAI()
+    user_prompt = (
+        "CONTEXT:\n"
+        f"{context}\n\n"
+        "QUESTION:\n"
+        f"{query}\n\n"
+        "Trả lời bằng tiếng Việt. Chỉ dùng nội dung được nói trực tiếp trong "
+        "CONTEXT. Không suy luận thêm. Mỗi bullet phải bám một đoạn trong "
+        "CONTEXT và cite đúng filename ở dòng 'Citation to use'."
+    )
+    response = client.chat.completions.create(
+        model=os.getenv("OPENAI_MODEL", LLM_MODEL),
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=TEMPERATURE,
+        top_p=TOP_P,
+    )
+    answer = response.choices[0].message.content
+    return (answer or "").strip()
+
+
+def _support_coverage(claim: str, content: str) -> float:
+    claim_terms = {
+        token for token in tokenize(_ANSWER_CITATION_RE.sub("", claim))
+        if len(token) > 1 and token not in _SUPPORT_STOPWORDS
+    }
+    if not claim_terms:
+        return 0.0
+    content_terms = set(tokenize(content))
+    return len(claim_terms & content_terms) / len(claim_terms)
+
+
+def _best_supported_source(claim: str, chunks: list[dict]) -> tuple[str | None, float, float]:
+    best_source = None
+    best_coverage = 0.0
+    best_score = 0.0
+    for chunk in chunks:
+        content = chunk.get("content", "")
+        coverage = _support_coverage(claim, content)
+        similarity = text_similarity(claim, content)
+        score = 0.7 * coverage + 0.3 * similarity
+        if score > best_score:
+            best_score = score
+            best_coverage = coverage
+            best_source = chunk.get("metadata", {}).get("source")
+    return best_source, best_coverage, best_score
+
+
+def _ground_llm_answer(answer: str, chunks: list[dict]) -> str:
+    """Keep only claims supported by retrieved chunks and repair citations."""
+    if CANNOT_VERIFY in answer:
+        return CANNOT_VERIFY
+
+    grounded_lines = []
+    for raw_line in answer.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        source, coverage, score = _best_supported_source(line, chunks)
+        if not source or (coverage < 0.45 and score < 0.35):
+            continue
+
+        clean_line = _ANSWER_CITATION_RE.sub("", line).rstrip(" .")
+        grounded_lines.append(f"{clean_line}. [{source}]")
+
+    return "\n".join(grounded_lines) if grounded_lines else CANNOT_VERIFY
 
 
 # =============================================================================
@@ -144,50 +243,10 @@ def format_context(chunks: list[dict]) -> str:
         score = chunk.get("score", 0.0)
         context_parts.append(
             f"[Document {i} | Source: {source} | Type: {doc_type} | Score: {score:.3f}]\n"
+            f"Citation to use: [{source}]\n"
             f"{chunk['content']}\n"
         )
     return "\n---\n".join(context_parts)
-
-
-def _citation(metadata: dict) -> str:
-    source = metadata.get("source", "Nguồn không rõ")
-    year_match = re.search(r"(20\d{2}|19\d{2})", source)
-    if year_match:
-        label = f"{source}, {year_match.group(1)}"
-    else:
-        doc_type = metadata.get("type", "nguồn")
-        label = f"{source}, {doc_type}"
-    return f"[{label}]"
-
-
-# Dấu hiệu đoạn biểu mẫu pháp lý cần loại: chuỗi chấm/ellipsis, ô trống, gạch dưới.
-_FORM_NOISE = re.compile(r"[.…]{4,}|□|_{4,}")
-
-
-def _is_meaningful(sentence: str) -> bool:
-    """Loại câu rác: heading, biểu mẫu nhiều dấu chấm/ô trống/gạch dưới."""
-    if sentence.startswith("#") or _FORM_NOISE.search(sentence):
-        return False
-    letters = sum(ch.isalpha() for ch in sentence)
-    return len(sentence) >= 40 and letters / max(1, len(sentence)) > 0.55
-
-
-def _snippet(text: str, max_sentences: int = 2, max_chars: int = 300) -> str:
-    """Lấy tối đa `max_sentences` câu có nghĩa đầu tiên làm trích đoạn trả lời."""
-    text = re.sub(r"^#.*$", "", text, flags=re.MULTILINE).strip()
-    sentences = re.split(r"(?<=[.!?。])\s+", text)
-    picked: list[str] = []
-    for sentence in sentences:
-        cleaned = re.sub(r"\s+", " ", sentence).strip()
-        if _is_meaningful(cleaned):
-            picked.append(cleaned)
-        if len(picked) >= max_sentences:
-            break
-    if picked:
-        return " ".join(picked)[:max_chars].strip()
-    # Không có câu nào "sạch": chỉ trả về nguyên văn nếu nó không phải biểu mẫu rác.
-    fallback = re.sub(r"\s+", " ", text).strip()
-    return "" if _FORM_NOISE.search(fallback) else fallback[:max_chars]
 
 
 # =============================================================================
@@ -237,21 +296,26 @@ def generate_with_citation(query: str, top_k: int = TOP_K, gate_query: str | Non
         return {"answer": CANNOT_VERIFY, "sources": [], "retrieval_source": "none"}
 
     reordered = reorder_for_llm(chunks)
-    format_context(reordered)
+    context = format_context(reordered)
 
-    lines = []
-    for chunk in reordered[: min(3, len(reordered))]:
-        sentence = _snippet(chunk.get("content", ""))
-        if not sentence:
-            continue
-        citation = _citation(chunk.get("metadata", {}))
-        lines.append(f"{sentence} {citation}")
-    answer = "\n\n".join(lines) if lines else CANNOT_VERIFY
+    try:
+        answer = _call_llm(context, query)
+    except Exception as exc:
+        answer = (
+            "Không thể gọi LLM để sinh câu trả lời RAG. "
+            f"Lý do: {exc}. "
+            "Các nguồn liên quan vẫn được trả về bên dưới."
+        )
+    if not answer:
+        answer = CANNOT_VERIFY
+    elif answer != CANNOT_VERIFY:
+        answer = _ground_llm_answer(answer, chunks)
 
     return {
         "answer": answer,
         "sources": chunks,
         "retrieval_source": chunks[0].get("source", "hybrid") if chunks else "none",
+        "llm_model": os.getenv("OPENAI_MODEL", LLM_MODEL),
     }
 
 

@@ -17,7 +17,6 @@
         --accent-dark: #115e59;
         --user: #e7f5f2;
         --assistant: #ffffff;
-        --source: #f1f5f9;
       }
 
       * {
@@ -101,12 +100,6 @@
         background: var(--user);
       }
 
-      .rewrite {
-        color: var(--muted);
-        font-size: 12px;
-        font-style: italic;
-      }
-
       main {
         overflow: hidden;
       }
@@ -161,43 +154,6 @@
         display: inline;
         color: var(--accent-dark);
         font-weight: 650;
-      }
-
-      .sources {
-        display: grid;
-        gap: 8px;
-      }
-
-      .source {
-        background: var(--source);
-        border: 1px solid #d8e1ea;
-        border-radius: 8px;
-        padding: 9px 10px;
-        color: #334155;
-        font-size: 13px;
-        line-height: 1.45;
-      }
-
-      details.sources-panel {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.72);
-        padding: 8px 10px;
-      }
-
-      details.sources-panel summary {
-        cursor: pointer;
-        color: var(--muted);
-        font-size: 13px;
-        font-weight: 650;
-      }
-
-      details.sources-panel[open] summary {
-        margin-bottom: 8px;
-      }
-
-      .source strong {
-        color: #0f172a;
       }
 
       footer {
@@ -360,7 +316,7 @@
           .join("");
       }
 
-      function addMessage(role, text, sources = [], rewrittenQuery = null) {
+      function addMessage(role, text) {
         const article = document.createElement("article");
         article.className = `message ${role}`;
 
@@ -372,32 +328,6 @@
           bubble.textContent = text;
         }
         article.appendChild(bubble);
-
-        if (rewrittenQuery) {
-          const note = document.createElement("div");
-          note.className = "rewrite";
-          note.textContent = `↻ Hiểu câu hỏi theo ngữ cảnh: "${rewrittenQuery}"`;
-          article.appendChild(note);
-        }
-
-        if (sources.length) {
-          const panel = document.createElement("details");
-          panel.className = "sources-panel";
-          const summary = document.createElement("summary");
-          summary.textContent = `Nguồn tham khảo (${sources.length})`;
-          panel.appendChild(summary);
-
-          const wrap = document.createElement("div");
-          wrap.className = "sources";
-          sources.slice(0, 5).forEach((source, index) => {
-            const item = document.createElement("div");
-            item.className = "source";
-            item.innerHTML = `<strong>${index + 1}. ${escapeHtml(source.source)}</strong> · ${escapeHtml(source.type)} · score ${source.score}<br>${escapeHtml(source.preview)}`;
-            wrap.appendChild(item);
-          });
-          panel.appendChild(wrap);
-          article.appendChild(panel);
-        }
 
         chat.appendChild(article);
         chat.scrollTop = chat.scrollHeight;
@@ -435,7 +365,7 @@
             return;
           }
 
-          addMessage("assistant", data.answer, data.sources || [], data.rewritten_query);
+          addMessage("assistant", data.answer);
         } catch (error) {
           pendingNode.remove();
           addMessage("assistant", `Không gọi được API: ${error.message}`);
