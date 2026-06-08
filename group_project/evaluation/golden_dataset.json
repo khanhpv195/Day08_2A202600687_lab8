@@ -78,5 +78,25 @@
     "question": "Qua các vụ việc nghệ sĩ liên quan đến ma túy, báo chí đặt ra vấn đề gì về trách nhiệm của người nổi tiếng?",
     "expected_answer": "Báo chí cho rằng các vụ việc nghệ sĩ dính líu ma túy gióng lên hồi chuông cảnh tỉnh về trách nhiệm và ý thức giữ gìn hình ảnh của người làm nghệ thuật, đồng thời cho thấy chỉ một hành vi lệch chuẩn liên quan đến ma túy cũng có thể khiến hình ảnh và sự nghiệp gây dựng nhiều năm sụp đổ nhanh chóng, kèm theo hệ lụy như bị gỡ chương trình, phong sát.",
     "expected_context": "Báo Thanh Niên, 2026 (article_03)"
+  },
+  {
+    "question": "Hình phạt cho tội tàng trữ trái phép chất ma túy theo Điều 249 Bộ luật Hình sự (sửa đổi 2017)?",
+    "expected_answer": "Người tàng trữ trái phép chất ma túy mà không nhằm mục đích mua bán, vận chuyển, sản xuất thì bị phạt tù từ 01 năm đến 05 năm, áp dụng cho các trường hợp như: heroine, cocaine, methamphetamine, amphetamine, MDMA hoặc XLR-11 có khối lượng từ 0,1 gam đến dưới 05 gam; nhựa thuốc phiện, nhựa cần sa hoặc cao côca từ 01 gam đến dưới 500 gam; hoặc các chất ma túy khác ở thể rắn từ 01 gam đến dưới 20 gam.",
+    "expected_context": "Luật 12/2017/QH14 sửa đổi Bộ luật Hình sự, Điều 249 khoản 1"
+  },
+  {
+    "question": "Tội vận chuyển trái phép chất ma túy theo Điều 250 Bộ luật Hình sự bị phạt tù bao nhiêu năm ở khung cơ bản?",
+    "expected_answer": "Người vận chuyển trái phép chất ma túy mà không nhằm mục đích sản xuất, mua bán, tàng trữ trái phép thì ở khung cơ bản bị phạt tù từ 02 năm đến 07 năm, áp dụng cho các trường hợp như heroine, cocaine, methamphetamine, amphetamine, MDMA hoặc XLR-11 có khối lượng từ 0,1 gam đến dưới 05 gam, hoặc nhựa thuốc phiện, nhựa cần sa, cao côca từ 01 gam đến dưới 500 gam.",
+    "expected_context": "Luật 12/2017/QH14 sửa đổi Bộ luật Hình sự, Điều 250 khoản 1"
+  },
+  {
+    "question": "Theo Luật Phòng, chống ma túy 2021, người từ bao nhiêu tuổi trở lên bị áp dụng biện pháp đưa vào cơ sở cai nghiện bắt buộc?",
+    "expected_answer": "Người nghiện ma túy từ đủ 18 tuổi trở lên bị áp dụng biện pháp xử lý hành chính đưa vào cơ sở cai nghiện bắt buộc theo quy định của Luật Xử lý vi phạm hành chính khi thuộc một trong các trường hợp luật định.",
+    "expected_context": "Luật 73/2021/QH14, Điều 32"
+  },
+  {
+    "question": "Thời hạn cai nghiện bắt buộc đối với người nghiện từ đủ 12 đến dưới 18 tuổi là bao lâu và do cơ quan nào quyết định?",
+    "expected_answer": "Thời hạn cai nghiện ma túy bắt buộc đối với người nghiện ma túy từ đủ 12 tuổi đến dưới 18 tuổi là từ đủ 06 tháng đến 12 tháng. Việc đưa vào cơ sở cai nghiện bắt buộc do Tòa án nhân dân cấp huyện quyết định và không phải là biện pháp xử lý hành chính.",
+    "expected_context": "Luật 73/2021/QH14, Điều 33 khoản 3 và khoản 4"
   }
 ]
