@@ -10,6 +10,9 @@ Yêu cầu:
 """
 
 
+from .rag_utils import ensure_chunks, text_similarity
+
+
 def semantic_search(query: str, top_k: int = 10) -> list[dict]:
     """
     Tìm kiếm ngữ nghĩa sử dụng vector similarity.
@@ -26,37 +29,18 @@ def semantic_search(query: str, top_k: int = 10) -> list[dict]:
         }
         Sorted by score descending.
     """
-    # TODO: Implement semantic search
-    #
-    # Bước 1: Embed query bằng cùng model ở Task 4
-    # Bước 2: Query vector store (cosine similarity)
-    # Bước 3: Return top_k results
-    #
-    # Ví dụ với Weaviate:
-    # import weaviate
-    # from sentence_transformers import SentenceTransformer
-    #
-    # model = SentenceTransformer("BAAI/bge-m3")
-    # query_embedding = model.encode(query).tolist()
-    #
-    # client = weaviate.connect_to_local()
-    # collection = client.collections.get("DrugLawDocs")
-    #
-    # results = collection.query.near_vector(
-    #     near_vector=query_embedding,
-    #     limit=top_k,
-    #     return_metadata=MetadataQuery(distance=True)
-    # )
-    #
-    # return [
-    #     {
-    #         "content": obj.properties["content"],
-    #         "score": 1 - obj.metadata.distance,  # distance → similarity
-    #         "metadata": {"source": obj.properties["source"], ...}
-    #     }
-    #     for obj in results.objects
-    # ]
-    raise NotImplementedError("Implement semantic_search")
+    results = []
+    for chunk in ensure_chunks():
+        score = text_similarity(query, chunk["content"])
+        if score > 0:
+            results.append({
+                "content": chunk["content"],
+                "score": float(score),
+                "metadata": chunk.get("metadata", {}),
+            })
+
+    results.sort(key=lambda item: item["score"], reverse=True)
+    return results[:top_k]
 
 
 if __name__ == "__main__":

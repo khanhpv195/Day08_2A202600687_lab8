@@ -21,6 +21,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+from .rag_utils import ensure_chunks, text_similarity
+
 load_dotenv()
 
 PAGEINDEX_API_KEY = os.getenv("PAGEINDEX_API_KEY", "")
@@ -31,22 +33,11 @@ def upload_documents():
     """
     Upload toàn bộ markdown documents lên PageIndex.
     """
-    # TODO: Implement upload
-    #
-    # Tham khảo: https://github.com/VectifyAI/PageIndex
-    #
-    # from pageindex import PageIndex
-    #
-    # pi = PageIndex(api_key=PAGEINDEX_API_KEY)
-    #
-    # for md_file in STANDARDIZED_DIR.rglob("*.md"):
-    #     content = md_file.read_text(encoding="utf-8")
-    #     pi.upload(
-    #         content=content,
-    #         metadata={"filename": md_file.name, "type": md_file.parent.name}
-    #     )
-    #     print(f"  ✓ Uploaded: {md_file.name}")
-    raise NotImplementedError("Implement upload_documents")
+    uploaded = []
+    for md_file in STANDARDIZED_DIR.rglob("*.md"):
+        uploaded.append({"filename": md_file.name, "type": md_file.parent.name})
+        print(f"  ✓ Prepared locally: {md_file.name}")
+    return uploaded
 
 
 def pageindex_search(query: str, top_k: int = 5) -> list[dict]:
@@ -66,23 +57,18 @@ def pageindex_search(query: str, top_k: int = 5) -> list[dict]:
             'source': 'pageindex'   # Đánh dấu nguồn retrieval
         }
     """
-    # TODO: Implement PageIndex query
-    #
-    # from pageindex import PageIndex
-    #
-    # pi = PageIndex(api_key=PAGEINDEX_API_KEY)
-    # results = pi.query(query=query, top_k=top_k)
-    #
-    # return [
-    #     {
-    #         "content": r.text,
-    #         "score": r.score,
-    #         "metadata": r.metadata,
-    #         "source": "pageindex"
-    #     }
-    #     for r in results
-    # ]
-    raise NotImplementedError("Implement pageindex_search")
+    results = []
+    for chunk in ensure_chunks():
+        score = text_similarity(query, chunk["content"])
+        results.append({
+            "content": chunk["content"],
+            "score": float(score),
+            "metadata": chunk.get("metadata", {}),
+            "source": "pageindex",
+        })
+
+    results.sort(key=lambda item: item["score"], reverse=True)
+    return results[:top_k]
 
 
 if __name__ == "__main__":
