@@ -151,7 +151,7 @@ run_dashboard()
 
 ### Deliverable Evaluation
 
-- [x] File `group_project/evaluation/golden_dataset.json` — **16** cặp Q&A
+- [x] File `group_project/evaluation/golden_dataset.json` — **20** cặp Q&A
 - [x] File `group_project/evaluation/eval_pipeline.py` — script chạy evaluation (4 metrics)
 - [x] File `group_project/evaluation/results.md` — bảng điểm + phân tích + worst performers
 - [x] So sánh A/B 2 configs (hybrid + rerank vs no-rerank)
@@ -199,7 +199,7 @@ Nhóm chọn **Option B — RAG Chatbot** (`chat_server.py` + `web/index.html`).
         └───────────────────────────────────────────────────────────────────┘
 
    Đánh giá:  group_project/evaluation/eval_pipeline.py
-              golden_dataset.json (16 Q&A) ─▶ A/B (rerank vs no-rerank) ─▶ results.md
+              golden_dataset.json (20 Q&A) ─▶ A/B (rerank vs no-rerank) ─▶ results.md
 ```
 
 **Data flow:** PDF/DOCX luật + JSON bài báo → MarkItDown → markdown chuẩn hoá →
@@ -212,7 +212,7 @@ chunk + index → hybrid retrieval + rerank (fallback PageIndex) → generation 
 | Thành viên | MSSV | Nhiệm vụ | Trạng thái |
 |-----------|------|----------|------------|
 | Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Pipeline cá nhân Task 1–10 (35/35 test pass) | ✅ Hoàn thành |
-| Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Golden dataset 16 cặp Q&A (`golden_dataset.json`) | ✅ Hoàn thành |
+| Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Golden dataset 20 cặp Q&A (`golden_dataset.json`) | ✅ Hoàn thành |
 | Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Evaluation pipeline + A/B (rerank vs no-rerank) + phân tích worst performers (`eval_pipeline.py`, `results.md`) | ✅ Hoàn thành |
 | Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | RAG chatbot server + UI (`chat_server.py`, `web/index.html`) + diagram kiến trúc | ✅ Hoàn thành |
 | Phạm Văn Khánh & Nguyễn Trọng Khánh | 2A202600687+2A202600796 | Bonus — HyDE (`src/task_bonus_hyde.py`) | ✅ Hoàn thành |
